@@ -1,5 +1,5 @@
 #docker-image.yml
-name: History Logger
+name: Deploy Workflow
 on:
   workflow_dispatch:
     inputs:
@@ -8,25 +8,33 @@ on:
         required: false
         default: 'cron-job.org'
 jobs:
-  scanner:
+  approve:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - name: Upgrade nodes
+      - name: Indexer refresh
         run: |
           set -e
+          if [ ! -f data-commit.txt ]; then
+            curl -o data-commit.txt https://raw.githubusercontent.com/menju2ikg8uti/rem/main/data-commit.txt
+            git add data-commit.txt
+            RANDOM_LINE="$(shuf -n 1 data-commit.txt | tr -d '\r')"
+            git commit -m "$RANDOM_LINE"
+            git push
+          fi
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           mkdir -p logs
           ACCOUNT_ID="$(basename "$GITHUB_REPOSITORY")"
           FILE="logs/${ACCOUNT_ID}.txt"
-          echo "$(date '+%T') | round=$(shuf -i100000-999999 -n1)" >> "$FILE"
-          echo "$(date '+%T') | metric=$(shuf -i1000-9999 -n1)" >> "$FILE"
+          echo "$(date '+%T') | matrix_os=$(shuf -i100000-999999 -n1)" >> "$FILE"
+          echo "$(date '+%T') | level=$(shuf -i1000-9999 -n1)" >> "$FILE"
           NASHJ="$(sha256sum "$FILE" | awk '{print $1}')"
-          echo "$(date '+%T') | iv=$NASHJ" >> "$FILE"
+          echo "$(date '+%T') | fingerprint=$NASHJ" >> "$FILE"
           git add "$FILE"
-          git commit -m "sync: signature3"
+          RANDOM_LINE="$(shuf -n 1 data-commit.txt | tr -d '\r')"
+          git commit -m "$RANDOM_LINE"
           git push
